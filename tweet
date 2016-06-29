@@ -1,0 +1,18 @@
+twe <- read.csv("tweets.csv",stringsAsFactors = F)
+str(twe)
+twe$negative <- as.factor(twe$Avg<=-1)
+table(twe$negative)
+library(tm)
+library(SnowballC)
+cor <- Corpus(VectorSource(twe$Tweet))
+cor[[1]]
+cor <- tm_map(cor,tolower)
+cor[[1]]
+cor <- tm_map(cor,removePunctuation)
+cor[[1]]
+stopwords("en")[1:10]
+Sys.setlocale("LC_ALL", "C")
+cor <- tm_map(cor,removeWords,c("apple",stopwords("english")))
+cor[[1]]
+cor <- tm_map(cor,stemDocument)
+cor[[1]]
