@@ -5,14 +5,49 @@ table(twe$negative)
 library(tm)
 library(SnowballC)
 cor <- Corpus(VectorSource(twe$Tweet))
+cor
 cor[[1]]
 cor <- tm_map(cor,tolower)
 cor[[1]]
+cor <- tm_map(cor,PlainTextDocument)
 cor <- tm_map(cor,removePunctuation)
 cor[[1]]
 stopwords("en")[1:10]
-Sys.setlocale("LC_ALL", "C")
-cor <- tm_map(cor,removeWords,c("apple",stopwords("english")))
+cor <- tm_map(cor,removeWords,c("apple",stopwords("en")))
 cor[[1]]
 cor <- tm_map(cor,stemDocument)
 cor[[1]]
+freq <- DocumentTermMatrix(cor)
+freq
+inspect(freq[1000:1005,505:515])
+findFreqTerms(freq,lowfreq = 20)
+sparse <- removeSparseTerms(freq,0.995)
+sparse
+twsparse <- as.data.frame(as.matrix(sparse))
+colnames(twsparse) <- make.names(colnames(twsparse))
+twsparse$negative <- twe$negative
+library(caTools)
+set.seed(123)
+split <- sample.split(twsparse$negative,SplitRatio = 0.7)
+train <- subset(twsparse,split==T)
+test <- subset(twsparse,split==F)
+library(rpart)
+library(rpart.plot)
+tweCART <- rpart(negative~.,data = train,method = "class")
+prp(tweCART)
+pred <- predict(tweCART, newdata = test,type = "class")
+table(test$negative,pred)
+(295+18)/nrow(test)
+table(test$negative)
+300/355
+library(randomForest)
+set.seed(123)
+tweRF <- randomForest(negative~.,data = train)
+preRF <- predict(tweRF,newdata = test)
+table(test$negative,preRF)
+(287+24)/nrow(test)
+tweLOG <- glm(negative~.,data = train,family = "binomial")
+preLOG <- predict(tweLOG,newdata = test)
+table(test$negative,preLOG>=0.5)
+(223+33)/nrow(test)
+#tweetfeel
