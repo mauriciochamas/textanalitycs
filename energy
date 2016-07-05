@@ -1,0 +1,46 @@
+mail <- read.csv("energy_bids.csv",stringsAsFactors = F)
+str(mail)
+mail$email[1]
+strwrap(mail$email[1])
+mail$responsive[2]
+strwrap(mail$email[2])
+table(mail$responsive)
+library(NLP)
+library(tm)
+corp <- Corpus(VectorSource(mail$email))
+strwrap(corp[[1]])
+corp <- tm_map(corp,tolower)
+#run the following command immediately after converting all of the words to lowercase
+corp <- tm_map(corp, PlainTextDocument)
+corp <- tm_map(corp, removePunctuation)
+corp <- tm_map(corp, removeWords, stopwords("en"))
+corp <- tm_map(corp, stemDocument)
+strwrap(corp[[1]])
+dtm <- DocumentTermMatrix(corp)
+dtm <- removeSparseTerms(dtm,0.97)
+dtm
+label <- as.data.frame(as.matrix(dtm))
+label$responsive <- mail$responsive
+str(label)
+library(caTools)
+set.seed(144)
+split <- sample.split(label$responsive,0.7)
+train <- subset(label,split==T)
+test <- subset(label,split==F)
+library(rpart)
+library(rpart.plot)
+mailCART <- rpart(responsive~.,data = train,method = "class")
+prp(mailCART)
+pred <- predict(mailCART,newdata = test)
+pred[1:10,]
+pred.prob <- pred[,2]
+table(test$responsive,pred.prob>=0.5)
+(195+25)/nrow(test)
+#baseline
+table(test$responsive)
+215/nrow(test)
+library(ROCR)
+predROCR <- prediction(pred.prob,test$responsive)
+perfROCR <- performance(predROCR,"tpr","fpr")
+plot(perfROCR,colorize=T)
+performance(predROCR,"auc")@y.values
