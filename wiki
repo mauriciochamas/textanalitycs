@@ -1,0 +1,69 @@
+wik <- read.csv("wiki.csv",stringsAsFactors = F)
+wik$Vandal <- as.factor(wik$Vandal)
+table(wik$Vandal)
+#Create the corpus for the Added column, and call it "corpusAdded".
+library(tm)
+corpA <- Corpus(VectorSource(wik$Added))
+#Remove the English-language stopwords
+corpA <- tm_map(corpA, removeWords, stopwords("en"))
+#Stem the words.
+corpA <- tm_map(corpA, stemDocument)
+#Build the DocumentTermMatrix, and call it dtmAdded
+dtmA <- DocumentTermMatrix(corpA)
+spaA <- removeSparseTerms(dtmA,0.997)
+wordA <- as.data.frame(as.matrix(spaA))
+colnames(wordA) <-  paste("A", colnames(wordA))
+#Removed
+corpR <- Corpus(VectorSource(wik$Removed))
+corpR <- tm_map(corpR, removeWords, stopwords("en"))
+corpR <- tm_map(corpR, stemDocument)
+dtmR <- DocumentTermMatrix(corpR)
+spaR <- removeSparseTerms(dtmR,0.997)
+wordR <- as.data.frame(as.matrix(spaR))
+colnames(wordR) <-  paste("R", colnames(wordR))
+#Combine the two data frames
+wikiWords <- cbind(wordA, wordR)
+wikiWords$Vandal <- wik$Vandal
+library(caTools)
+set.seed(123)
+split <- sample.split(wikiWords$Vandal,SplitRatio = 0.7)
+train <- subset(wikiWords,split==T)
+test <- subset(wikiWords,split==F)
+table(test$Vandal)
+618/1163
+library(rpart)
+library(rpart.plot)
+cart <- rpart(Vandal~.,data = train,method = "class")
+pred <- predict(cart, newdata = test,type = "class")
+table(test$Vandal,pred)
+(618+12)/nrow(test)
+prp(cart)
+wikiWords2 <- wikiWords
+#The grepl function returns TRUE if a string is found in another string
+wikiWords2$http <- ifelse(grepl("http",wik$Added,fixed = T),1,0)
+table(wikiWords2$http)
+train2 <- subset(wikiWords2,split==T)
+test2 <- subset(wikiWords2,split==F)
+cart2 <- rpart(Vandal~.,data = train2,method = "class")
+pred2 <- predict(cart2,newdata = test2,type = "class")
+table(test2$Vandal,pred2)
+(609+57)/nrow(test2)
+wikiWords2$sumA <- rowSums(as.matrix(dtmA))
+wikiWords2$sumR <- rowSums(as.matrix(dtmR))
+mean(wikiWords2$sumA)
+train3 <- subset(wikiWords2,split==T)
+test3 <- subset(wikiWords2,split==F)
+cart3 <- rpart(Vandal~.,data = train3,method = "class")
+pred3 <- predict(cart3,newdata = test3,type = "class")
+table(test3$Vandal,pred3)
+(514+248)/nrow(test2)
+wikiWords3 <- wikiWords2
+wikiWords3$minor <- wik$Minor
+wikiWords3$loggedin <- wik$Loggedin
+train4 <- subset(wikiWords3,split==T)
+test4 <- subset(wikiWords3,split==F)
+cart4 <- rpart(Vandal~.,data = train4,method = "class")
+pred4 <- predict(cart4,newdata = test4,type = "class")
+table(test4$Vandal,pred4)
+(595+241)/nrow(test4)
+prp(cart4)
